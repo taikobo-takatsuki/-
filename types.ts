@@ -7,6 +7,7 @@ export interface Expense {
   id: string;
   title: string;
   amount: number;
+  currency: string; // Added for multi-currency support
   paidBy: string; // Member ID
   involvedMembers: string[]; // Member IDs (対象メンバー)
   timestamp: number;
@@ -15,7 +16,7 @@ export interface Expense {
 export interface Group {
   id: string;
   name: string;
-  currency: string;
+  currency: string; // This is now the "Base Currency"
   members: Member[];
   expenses: Expense[];
   createdAt: number;

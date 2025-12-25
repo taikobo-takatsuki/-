@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, X, Users, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Button } from './Button';
 import { Group } from '../types';
-import { generateId } from '../utils';
+import { generateId, CURRENCIES } from '../utils';
 
 interface CreateGroupProps {
   onCreate: (group: Group) => void;
@@ -54,52 +54,56 @@ export const CreateGroup: React.FC<CreateGroupProps> = ({ onCreate, onCancel }) 
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 relative">
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-xl shadow-stone-200/50 p-8 relative border border-white">
         <button 
           onClick={onCancel}
-          className="absolute left-6 top-6 text-slate-400 hover:text-slate-600 transition-colors p-2 -ml-2 rounded-full hover:bg-slate-50"
+          className="absolute left-6 top-6 text-stone-400 hover:text-stone-600 transition-colors p-2 -ml-2 rounded-full hover:bg-stone-50"
         >
           <ArrowLeft size={24} />
         </button>
 
         <div className="text-center mb-8 pt-4">
-          <div className="mx-auto w-12 h-12 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mb-4">
-            <Users size={24} />
+          <div className="mx-auto w-16 h-16 bg-primary-100 text-primary-500 rounded-full flex items-center justify-center mb-4 shadow-sm">
+            <Users size={28} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">グループを作成</h1>
-          <p className="text-slate-500 mt-2">旅行やイベントの経費を簡単に記録</p>
+          <h1 className="text-2xl font-extrabold text-stone-800">グループをつくる</h1>
+          <p className="text-stone-500 mt-2 font-medium">楽しいイベントをはじめよう！</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">イベント名 / グループ名</label>
+            <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">イベント名</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例: 夏旅行 2024"
-              className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all outline-none"
+              placeholder="例: 京都旅行 2024"
+              className="w-full px-6 py-4 rounded-2xl bg-stone-50 border-2 border-transparent focus:border-primary-300 focus:bg-white focus:ring-0 transition-all outline-none font-bold text-stone-800 placeholder-stone-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">通貨</label>
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all outline-none bg-white"
-            >
-              <option value="JPY">日本円 (JPY ¥)</option>
-              <option value="USD">米ドル (USD $)</option>
-              <option value="EUR">ユーロ (EUR €)</option>
-              <option value="GBP">ポンド (GBP £)</option>
-            </select>
+            <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">精算する通貨 (ベース)</label>
+            <div className="relative">
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full px-6 py-4 rounded-2xl bg-stone-50 border-2 border-transparent focus:border-primary-300 focus:bg-white focus:ring-0 transition-all outline-none font-bold text-stone-800 appearance-none"
+              >
+                {CURRENCIES.map(c => (
+                  <option key={c.code} value={c.code}>{c.name} ({c.code} {c.symbol})</option>
+                ))}
+              </select>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400">
+                <ArrowRight size={16} className="rotate-90" />
+              </div>
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">メンバー</label>
+            <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">メンバー</label>
             <div className="space-y-3">
               {members.map((member, index) => (
                 <div key={index} className="flex gap-2">
@@ -109,13 +113,13 @@ export const CreateGroup: React.FC<CreateGroupProps> = ({ onCreate, onCancel }) 
                     value={member}
                     onChange={(e) => handleMemberChange(index, e.target.value)}
                     placeholder={`メンバー ${index + 1}`}
-                    className="flex-1 px-4 py-3 rounded-lg border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all outline-none"
+                    className="flex-1 px-6 py-3.5 rounded-2xl bg-stone-50 border-2 border-transparent focus:border-primary-300 focus:bg-white focus:ring-0 transition-all outline-none font-medium text-stone-800 placeholder-stone-300"
                   />
                   {members.length > 2 && (
                     <button
                       type="button"
                       onClick={() => removeMemberField(index)}
-                      className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-3.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-colors"
                     >
                       <X size={20} />
                     </button>
@@ -126,15 +130,17 @@ export const CreateGroup: React.FC<CreateGroupProps> = ({ onCreate, onCancel }) 
             <button
               type="button"
               onClick={addMemberField}
-              className="mt-3 text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1"
+              className="mt-4 w-full py-3 border-2 border-dashed border-stone-200 rounded-2xl text-stone-400 font-bold hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50 transition-all flex items-center justify-center gap-2"
             >
-              <Plus size={16} /> メンバーを追加
+              <Plus size={18} /> メンバーを追加
             </button>
           </div>
 
-          <Button type="submit" fullWidth disabled={!name.trim() || members.filter(m => m.trim()).length < 2}>
-            グループを作成する <ArrowRight size={18} className="ml-2" />
-          </Button>
+          <div className="pt-4">
+            <Button type="submit" fullWidth disabled={!name.trim() || members.filter(m => m.trim()).length < 2}>
+              はじめる！ <ArrowRight size={20} className="ml-2" />
+            </Button>
+          </div>
         </form>
       </div>
     </div>

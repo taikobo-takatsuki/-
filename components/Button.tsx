@@ -12,13 +12,13 @@ export const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+  const baseStyles = "inline-flex items-center justify-center rounded-2xl px-6 py-3.5 text-sm font-bold transition-all focus:outline-none focus:ring-4 disabled:opacity-50 disabled:pointer-events-none active:scale-95";
   
   const variants = {
-    primary: "bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500",
-    secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 focus:ring-slate-200",
-    ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-    danger: "bg-red-50 text-red-600 hover:bg-red-100 focus:ring-red-500",
+    primary: "bg-primary-500 text-white shadow-lg shadow-primary-200 hover:bg-primary-600 hover:shadow-primary-300 focus:ring-primary-100",
+    secondary: "bg-white text-slate-600 border-2 border-slate-100 hover:border-primary-200 hover:text-primary-600 focus:ring-slate-100",
+    ghost: "bg-transparent text-slate-500 hover:bg-primary-50 hover:text-primary-600",
+    danger: "bg-red-50 text-red-500 hover:bg-red-100 focus:ring-red-100 border-2 border-transparent",
   };
 
   const widthStyle = fullWidth ? "w-full" : "";

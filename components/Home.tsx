@@ -15,67 +15,75 @@ export const Home: React.FC<HomeProps> = ({ history, onCreateNew, onSelectGroup,
   const sortedHistory = [...history].sort((a, b) => b.updatedAt - a.updatedAt);
 
   const getTotalExpenses = (group: Group) => {
-    return group.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    // Note: This total ignores exchange rates if not settled, but gives a rough idea in base currency 
+    // strictly summing amounts isn't accurate for mixed currencies, but for list view it's acceptable simplified
+    return group.expenses.reduce((sum, exp) => {
+        // Simple fallback: just add raw amounts if currency matches, otherwise ignore or treat 1:1 for preview
+        // To be precise we'd need saved rates, but let's just sum base currency items or show count
+        return sum + (exp.currency === group.currency ? exp.amount : 0);
+    }, 0);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 pb-20">
-      <div className="max-w-md mx-auto space-y-8">
+    <div className="min-h-screen bg-stone-50 p-6 pb-24">
+      <div className="max-w-md mx-auto space-y-10">
         {/* Header */}
-        <div className="text-center pt-8 pb-4">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">割り勘アプリ</h1>
-          <p className="text-slate-500 text-sm mt-1">イベントや旅行の経費をスマートに精算</p>
+        <div className="text-center pt-10 pb-2">
+          <h1 className="text-4xl font-extrabold text-stone-800 tracking-tight drop-shadow-sm">
+            <span className="text-primary-500">ワリ</span>カーーン！
+          </h1>
+          <p className="text-stone-400 text-sm mt-3 font-medium">ゆるっと割り勘、パッと精算。</p>
         </div>
 
         {/* Create New Action */}
         <button
           onClick={onCreateNew}
-          className="w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center gap-3 hover:border-primary-300 hover:shadow-md transition-all group active:scale-[0.98]"
+          className="w-full bg-white p-8 rounded-[2.5rem] shadow-xl shadow-stone-200/50 border border-white flex flex-col items-center justify-center gap-4 hover:border-primary-200 hover:shadow-2xl transition-all group active:scale-[0.98]"
         >
-          <div className="w-14 h-14 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-colors">
-            <Plus size={28} />
+          <div className="w-16 h-16 bg-primary-50 text-primary-500 rounded-full flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-colors shadow-sm">
+            <Plus size={32} />
           </div>
-          <span className="font-bold text-slate-900">新しいグループを作成</span>
+          <span className="font-bold text-stone-700 text-lg">あたらしく作る</span>
         </button>
 
         {/* History Section */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-slate-500 px-1">
+          <div className="flex items-center gap-2 text-stone-400 px-2">
             <History size={18} />
-            <h2 className="font-bold text-sm">履歴 (過去1年分)</h2>
+            <h2 className="font-bold text-sm">これまでの記録 (1年分)</h2>
           </div>
 
           {sortedHistory.length === 0 ? (
-            <div className="text-center py-10 bg-white rounded-xl border border-slate-100 border-dashed">
-              <p className="text-slate-400 text-sm">まだ履歴がありません</p>
+            <div className="text-center py-12 bg-white rounded-3xl border-2 border-dashed border-stone-100">
+              <p className="text-stone-300 text-sm font-bold">まだ何もないよ</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {sortedHistory.map((group) => (
                 <div
                   key={group.id}
                   onClick={() => onSelectGroup(group)}
-                  className={`bg-white p-4 rounded-xl border shadow-sm transition-all active:scale-[0.99] cursor-pointer relative overflow-hidden group ${
-                    group.isCompleted ? 'border-slate-200 opacity-90' : 'border-primary-200 hover:border-primary-300'
+                  className={`bg-white p-6 rounded-[2rem] border shadow-sm transition-all active:scale-[0.98] cursor-pointer relative overflow-hidden group ${
+                    group.isCompleted ? 'border-stone-100 opacity-80 bg-stone-50' : 'border-white shadow-stone-200/50 hover:border-primary-200'
                   }`}
                 >
                   {group.isCompleted && (
-                    <div className="absolute top-0 right-0 bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-bl-lg z-0">
-                      精算済
+                    <div className="absolute top-0 right-0 bg-stone-200 text-stone-500 text-[10px] font-bold px-3 py-1.5 rounded-bl-2xl z-0">
+                      おわったやつ
                     </div>
                   )}
                   
                   <div className="flex justify-between items-center relative z-10">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-900 truncate pr-2">{group.name}</h3>
-                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                        <span className="flex items-center gap-1">
-                          <Calendar size={12} />
+                      <h3 className="font-extrabold text-stone-800 truncate pr-2 text-lg">{group.name}</h3>
+                      <div className="flex items-center gap-4 text-xs text-stone-400 mt-2 font-medium">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={14} />
                           {new Date(group.createdAt).toLocaleDateString('ja-JP')}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Wallet size={12} />
-                          {formatCurrency(getTotalExpenses(group), group.currency)}
+                        <span className="flex items-center gap-1.5">
+                          <Wallet size={14} />
+                          {group.currency}
                         </span>
                       </div>
                     </div>
@@ -83,12 +91,14 @@ export const Home: React.FC<HomeProps> = ({ history, onCreateNew, onSelectGroup,
                     <div className="flex items-center gap-2 pl-2">
                        <button
                           onClick={(e) => onDeleteGroup(group.id, e)}
-                          className="relative z-20 p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                          className="relative z-20 p-3 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-full transition-colors"
                           title="削除"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={20} />
                         </button>
-                       <ChevronRight size={18} className="text-slate-300 group-hover:text-primary-400" />
+                       <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-300 group-hover:bg-primary-50 group-hover:text-primary-400 transition-colors">
+                         <ChevronRight size={20} />
+                       </div>
                     </div>
                   </div>
                 </div>

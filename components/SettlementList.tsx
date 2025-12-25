@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Member, Debt } from '../types';
 import { formatCurrency } from '../utils';
 
@@ -7,45 +7,71 @@ interface SettlementListProps {
   debts: Debt[];
   members: Member[];
   currency: string;
+  hasPendingRates?: boolean;
 }
 
-export const SettlementList: React.FC<SettlementListProps> = ({ debts, members, currency }) => {
+export const SettlementList: React.FC<SettlementListProps> = ({ debts, members, currency, hasPendingRates }) => {
   const getMemberName = (id: string) => members.find(m => m.id === id)?.name || '不明';
+
+  if (hasPendingRates) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-stone-400 bg-white rounded-3xl border border-dashed border-stone-200">
+        <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mb-4 text-stone-400">
+          <AlertCircle size={32} />
+        </div>
+        <p className="font-bold text-stone-600">計算できません...</p>
+        <p className="text-sm mt-1">外貨のレートを入力してください</p>
+      </div>
+    );
+  }
 
   if (debts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4 text-green-500">
-          <CheckCircle2 size={32} />
+      <div className="flex flex-col items-center justify-center py-12 text-stone-400">
+        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4 text-green-500 shadow-sm">
+          <CheckCircle2 size={40} />
         </div>
-        <p className="font-bold">精算完了！</p>
-        <p className="text-sm mt-1">貸し借りはありません。</p>
+        <p className="font-extrabold text-lg text-stone-700">精算かんりょう！</p>
+        <p className="text-sm mt-2 text-stone-500">貸し借りはもうありません✨</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {debts.map((debt, index) => (
         <div 
           key={index} 
-          className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between"
+          className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
-              {getMemberName(debt.from).substring(0, 1)}
-            </div>
-            <div className="truncate flex items-center gap-2 text-sm sm:text-base">
-              <span className="font-bold text-slate-900">{getMemberName(debt.from)}</span>
-              <span className="text-slate-400 text-xs mx-1">→</span>
-              <span className="font-bold text-slate-900">{getMemberName(debt.to)}</span>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-3 w-full">
+               <div className="flex items-center gap-2 flex-1 min-w-0">
+                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-bold text-sm">
+                    {getMemberName(debt.from).substring(0, 1)}
+                  </div>
+                  <span className="font-bold text-stone-700 truncate">{getMemberName(debt.from)}</span>
+               </div>
+               
+               <div className="flex flex-col items-center px-2">
+                 <span className="text-[10px] text-stone-400 font-bold mb-1">TO</span>
+                 <ArrowRight size={20} className="text-stone-300" />
+               </div>
+
+               <div className="flex items-center gap-2 flex-1 min-w-0 justify-end sm:justify-start">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-500 font-bold text-sm order-2 sm:order-1">
+                    {getMemberName(debt.to).substring(0, 1)}
+                  </div>
+                  <span className="font-bold text-stone-700 truncate order-1 sm:order-2">{getMemberName(debt.to)}</span>
+               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-             <span className="font-bold text-primary-600 whitespace-nowrap text-lg">
+          <div className="flex items-center justify-center sm:justify-end bg-stone-50 sm:bg-transparent py-2 rounded-xl sm:py-0">
+             <span className="font-extrabold text-stone-800 whitespace-nowrap text-xl">
               {formatCurrency(debt.amount, currency)}
             </span>
+            <span className="text-xs font-bold text-stone-400 ml-1 self-end mb-1">を渡す</span>
           </div>
         </div>
       ))}

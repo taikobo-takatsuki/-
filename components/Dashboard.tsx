@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, ChevronLeft, Wallet, History, Scale, CheckCircle } from 'lucide-react';
+import { Plus, ChevronLeft, Wallet, History, Scale, CheckCircle, ArrowRight } from 'lucide-react';
 import { Group, Expense } from '../types';
-import { formatCurrency, calculateSettlements } from '../utils';
+import { formatCurrency, calculateSettlements, getCurrencySymbol } from '../utils';
 import { AddExpenseModal } from './AddExpenseModal';
 import { ExpenseList } from './ExpenseList';
 import { SettlementList } from './SettlementList';
@@ -18,41 +18,65 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
   const [activeTab, setActiveTab] = useState<'expenses' | 'settlements'>('settlements');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
-  const totalExpenses = useMemo(() => {
-    return group.expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  }, [group.expenses]);
+  // Detect foreign currencies used
+  const foreignCurrencies = useMemo(() => {
+    const used = new Set(group.expenses.map(e => e.currency));
+    used.delete(group.currency); // Remove base currency
+    return Array.from(used);
+  }, [group.expenses, group.currency]);
+
+  // Handle rate input
+  const handleRateChange = (currency: string, value: string) => {
+    setExchangeRates(prev => ({
+      ...prev,
+      [currency]: parseFloat(value) || 0
+    }));
+  };
+
+  const totalExpensesInBase = useMemo(() => {
+    return group.expenses.reduce((sum, exp) => {
+      const rate = exp.currency === group.currency ? 1 : (exchangeRates[exp.currency] || 0);
+      return sum + (exp.amount * rate);
+    }, 0);
+  }, [group.expenses, group.currency, exchangeRates]);
 
   const settlements = useMemo(() => {
-    return calculateSettlements(group.expenses, group.members);
-  }, [group.expenses, group.members]);
+    // Only calculate if all rates are entered (non-zero) or default to 0
+    return calculateSettlements(group.expenses, group.members, group.currency, exchangeRates);
+  }, [group.expenses, group.members, group.currency, exchangeRates]);
+
+  // Check if we need rates input
+  const needsRates = foreignCurrencies.length > 0;
+  const ratesValid = foreignCurrencies.every(c => (exchangeRates[c] || 0) > 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 relative pb-24">
+    <div className="min-h-screen bg-stone-50 relative pb-24">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+      <header className="bg-white/80 backdrop-blur-md border-b border-stone-100 sticky top-0 z-30">
         <div className="max-w-lg mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button 
               onClick={onBack}
-              className="p-2 -ml-2 text-slate-500 hover:text-slate-800 transition-colors"
+              className="p-2 -ml-2 text-stone-400 hover:text-stone-700 transition-colors rounded-full hover:bg-stone-50"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={28} />
             </button>
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div className="flex-shrink-0 w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="flex-shrink-0 w-10 h-10 bg-primary-100 rounded-2xl flex items-center justify-center text-primary-500 font-extrabold text-sm shadow-sm">
                 {group.name.substring(0, 1).toUpperCase()}
               </div>
-              <h1 className="font-bold text-slate-900 truncate">{group.name}</h1>
+              <h1 className="font-bold text-stone-800 truncate text-lg">{group.name}</h1>
             </div>
           </div>
           
           {!group.isCompleted && (
             <button 
               onClick={() => setIsCompleteDialogOpen(true)}
-              className="text-xs font-bold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full hover:bg-primary-100 transition-colors whitespace-nowrap"
+              className="text-xs font-bold text-white bg-stone-800 px-4 py-2 rounded-full hover:bg-stone-700 transition-colors whitespace-nowrap shadow-lg shadow-stone-200"
             >
-              精算完了
+              精算おわり！
             </button>
           )}
         </div>
@@ -61,61 +85,97 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
       <main className="max-w-lg mx-auto px-4 pt-6 space-y-6">
         
         {/* Total Card */}
-        <div className={`rounded-2xl p-6 text-white shadow-lg ${group.isCompleted ? 'bg-slate-600' : 'bg-gradient-to-br from-primary-600 to-primary-700 shadow-primary-200/50'}`}>
+        <div className={`rounded-[2.5rem] p-8 text-white shadow-xl shadow-primary-200/50 ${group.isCompleted ? 'bg-stone-500' : 'bg-gradient-to-br from-primary-400 to-primary-600'}`}>
           <div className="flex justify-between items-start">
              <div>
-                <p className="text-white/80 font-medium mb-1 flex items-center gap-2">
-                  <Wallet size={16} /> 合計支出
+                <p className="text-white/80 font-bold mb-1 flex items-center gap-2 text-sm">
+                  <Wallet size={16} /> ぜんぶで
                 </p>
-                <h2 className="text-4xl font-bold">
-                  {formatCurrency(totalExpenses, group.currency)}
+                <h2 className="text-4xl font-extrabold tracking-tight">
+                  {formatCurrency(totalExpensesInBase, group.currency)}
                 </h2>
+                {needsRates && !ratesValid && (
+                  <p className="text-xs text-white/70 mt-1">※レート未設定の外貨は含まれません</p>
+                )}
              </div>
              {group.isCompleted && (
-               <div className="bg-white/20 p-2 rounded-lg">
-                 <CheckCircle size={24} />
+               <div className="bg-white/20 p-2 rounded-2xl">
+                 <CheckCircle size={28} />
                </div>
              )}
           </div>
           
-          <div className="mt-4 flex gap-2 text-sm text-white/80">
-            <span className="bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
+          <div className="mt-6 flex gap-2 text-sm text-white/90 font-bold">
+            <span className="bg-white/20 px-4 py-1.5 rounded-full backdrop-blur-sm">
               {group.members.length} 人
             </span>
-            <span className="bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
+            <span className="bg-white/20 px-4 py-1.5 rounded-full backdrop-blur-sm">
               {group.expenses.length} 件
             </span>
             {group.isCompleted && (
-              <span className="bg-green-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm font-bold">
-                完了済み
+              <span className="bg-green-400 text-white px-4 py-1.5 rounded-full shadow-sm">
+                精算ずみ
               </span>
             )}
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex">
+        <div className="bg-white p-1.5 rounded-[1.5rem] border border-stone-100 shadow-sm flex">
           <button
             onClick={() => setActiveTab('settlements')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-2xl transition-all ${
               activeTab === 'settlements' 
-                ? 'bg-slate-100 text-slate-900 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                ? 'bg-stone-100 text-stone-800 shadow-inner' 
+                : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'
             }`}
           >
-            <Scale size={16} /> 精算
+            <Scale size={18} /> 精算プラン
           </button>
           <button
             onClick={() => setActiveTab('expenses')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-2xl transition-all ${
               activeTab === 'expenses' 
-                ? 'bg-slate-100 text-slate-900 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                ? 'bg-stone-100 text-stone-800 shadow-inner' 
+                : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'
             }`}
           >
-            <History size={16} /> 履歴
+            <History size={18} /> ログ
           </button>
         </div>
+
+        {/* Rate Setting Section for Settlements */}
+        {activeTab === 'settlements' && needsRates && !group.isCompleted && (
+          <div className="bg-white rounded-3xl p-6 border-2 border-primary-100 shadow-sm">
+            <h3 className="font-bold text-stone-700 mb-4 flex items-center gap-2 text-sm">
+              <Scale size={16} className="text-primary-500" />
+              本日のレートを入力してね
+            </h3>
+            <div className="space-y-4">
+              {foreignCurrencies.map(currency => (
+                <div key={currency} className="flex items-center gap-3">
+                  <div className="w-20 font-bold text-stone-500 text-right">
+                    1 {getCurrencySymbol(currency)}
+                  </div>
+                  <ArrowRight size={16} className="text-stone-300" />
+                  <div className="flex-1 relative">
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder={`0 ${group.currency}`}
+                      value={exchangeRates[currency] || ''}
+                      onChange={(e) => handleRateChange(currency, e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl bg-stone-50 border border-stone-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none font-bold text-stone-800 text-right pr-12"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm font-bold">
+                      {group.currency}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Content Area */}
         <div className="animate-in fade-in duration-300">
@@ -129,7 +189,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
             <SettlementList 
               debts={settlements} 
               members={group.members} 
-              currency={group.currency} 
+              currency={group.currency}
+              hasPendingRates={needsRates && !ratesValid}
             />
           )}
         </div>
@@ -140,10 +201,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
         <div className="fixed bottom-6 right-6 z-40 md:right-[calc(50%-14rem)]">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-slate-900 hover:bg-slate-800 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 focus:ring-4 focus:ring-slate-200"
+            className="bg-stone-800 hover:bg-black text-white w-16 h-16 rounded-[2rem] shadow-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 hover:rotate-3"
             title="立替を追加"
           >
-            <Plus size={28} />
+            <Plus size={32} />
           </button>
         </div>
       )}
@@ -158,9 +219,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
 
       <ConfirmDialog
         isOpen={isCompleteDialogOpen}
-        title="精算を完了しますか？"
-        message={`このグループの精算を完了としてマークします。\n完了するとホーム画面の「精算済」リストに移動します。`}
-        confirmText="完了にする"
+        title="これで精算しちゃう？"
+        message={`みんなの貸し借りを確定して、\nホーム画面の「精算ずみ」に移すよ！`}
+        confirmText="完了！"
         onConfirm={() => {
           onComplete();
           setIsCompleteDialogOpen(false);

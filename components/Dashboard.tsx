@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, ChevronLeft, Wallet, History, Scale, CheckCircle, ArrowRight } from 'lucide-react';
+import { Plus, ChevronLeft, Wallet, History, Scale, CheckCircle, ArrowRight, Share2, Check } from 'lucide-react';
 import { Group, Expense } from '../types';
-import { formatCurrency, calculateSettlements, getCurrencySymbol } from '../utils';
+import { formatCurrency, calculateSettlements, getCurrencySymbol, encodeGroupData } from '../utils';
 import { AddExpenseModal } from './AddExpenseModal';
 import { ExpenseList } from './ExpenseList';
 import { SettlementList } from './SettlementList';
@@ -19,6 +19,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [isCopied, setIsCopied] = useState(false);
 
   // Detect foreign currencies used
   const foreignCurrencies = useMemo(() => {
@@ -51,6 +52,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
   const needsRates = foreignCurrencies.length > 0;
   const ratesValid = foreignCurrencies.every(c => (exchangeRates[c] || 0) > 0);
 
+  const handleShare = async () => {
+    const encoded = encodeGroupData(group);
+    const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`;
+    
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `ワリカーーン！: ${group.name}`,
+          text: `${group.name}の割り勘状況を共有するよ！`,
+          url: url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      }
+    } catch (e) {
+      console.error("Sharing failed", e);
+      // Fallback
+      await navigator.clipboard.writeText(url);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-stone-50 relative pb-24">
       {/* Header */}
@@ -71,14 +97,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ group, onAddExpense, onBac
             </div>
           </div>
           
-          {!group.isCompleted && (
+          <div className="flex items-center gap-2">
             <button 
-              onClick={() => setIsCompleteDialogOpen(true)}
-              className="text-xs font-bold text-white bg-stone-800 px-4 py-2 rounded-full hover:bg-stone-700 transition-colors whitespace-nowrap shadow-lg shadow-stone-200"
+              onClick={handleShare}
+              className={`p-2 rounded-full transition-all flex items-center gap-2 ${isCopied ? 'bg-green-100 text-green-600' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'}`}
+              title="共有リンクをコピー"
             >
-              精算おわり！
+              {isCopied ? (
+                <>
+                  <Check size={20} />
+                  <span className="text-xs font-bold hidden sm:inline">コピー完了</span>
+                </>
+              ) : (
+                <Share2 size={24} />
+              )}
             </button>
-          )}
+            
+            {!group.isCompleted && (
+              <button 
+                onClick={() => setIsCompleteDialogOpen(true)}
+                className="text-xs font-bold text-white bg-stone-800 px-4 py-2 rounded-full hover:bg-stone-700 transition-colors whitespace-nowrap shadow-lg shadow-stone-200"
+              >
+                精算おわり！
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

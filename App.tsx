@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { Home } from './components/Home';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { Group, Expense } from './types';
+import { decodeGroupData } from './utils';
 
 const STORAGE_KEY = 'warikan_app_data_v1';
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
@@ -13,24 +14,25 @@ export default function App() {
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [view, setView] = useState<'home' | 'create' | 'dashboard'>('home');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [importConfirmGroup, setImportConfirmGroup] = useState<Group | null>(null);
 
-  // Load from local storage on mount
+  // Load from local storage on mount and check URL for shared data
   useEffect(() => {
+    let initialHistory: Group[] = [];
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         // Clean up old groups (> 1 year)
         const now = Date.now();
-        const validGroups = (parsed.history || []).filter((g: Group) => {
+        initialHistory = (parsed.history || []).filter((g: Group) => {
           return (now - g.createdAt) < ONE_YEAR_MS;
         });
-        
-        setHistory(validGroups);
-        
+        setHistory(initialHistory);
+
+        // Normally set active group if exists
         if (parsed.activeGroupId) {
-          // Verify ID exists
-          if (validGroups.find((g: Group) => g.id === parsed.activeGroupId)) {
+          if (initialHistory.find((g: Group) => g.id === parsed.activeGroupId)) {
             setActiveGroupId(parsed.activeGroupId);
             setView('dashboard');
           }
@@ -38,6 +40,18 @@ export default function App() {
       }
     } catch (e) {
       console.error("Failed to load history", e);
+    }
+
+    // Check URL parameters for shared data
+    const searchParams = new URLSearchParams(window.location.search);
+    const shareData = searchParams.get('share');
+    if (shareData) {
+      const importedGroup = decodeGroupData(shareData);
+      if (importedGroup) {
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+        setImportConfirmGroup(importedGroup);
+      }
     }
   }, []);
 
@@ -108,8 +122,26 @@ export default function App() {
     setView('dashboard');
   };
 
+  // 共有されたグループを取り込む処理
+  const handleImportConfirm = () => {
+    if (importConfirmGroup) {
+      // 既存の同じIDのグループがあれば上書き、なければ追加
+      setHistory(prev => {
+        const exists = prev.some(g => g.id === importConfirmGroup.id);
+        if (exists) {
+          return prev.map(g => g.id === importConfirmGroup.id ? importConfirmGroup : g);
+        } else {
+          return [importConfirmGroup, ...prev];
+        }
+      });
+      setActiveGroupId(importConfirmGroup.id);
+      setView('dashboard');
+      setImportConfirmGroup(null);
+    }
+  };
+
   return (
-    <div className="font-sans text-slate-900 antialiased selection:bg-primary-100 selection:text-primary-700">
+    <div className="font-sans text-stone-800 antialiased selection:bg-primary-100 selection:text-primary-700">
       {view === 'home' && (
         <Home 
           history={history}
@@ -143,6 +175,21 @@ export default function App() {
         variant="danger"
         onConfirm={executeDelete}
         onCancel={() => setDeleteTargetId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!importConfirmGroup}
+        title="共有されたグループを開きますか？"
+        message={
+          <span>
+            「<strong>{importConfirmGroup?.name}</strong>」のデータを受け取りました。<br/>
+            リストに追加して開きますか？<br/>
+            <span className="text-xs text-stone-400 block mt-2">※すでに同じグループがある場合は上書きされます。</span>
+          </span>
+        }
+        confirmText="開く！"
+        onConfirm={handleImportConfirm}
+        onCancel={() => setImportConfirmGroup(null)}
       />
     </div>
   );

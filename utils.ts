@@ -1,4 +1,4 @@
-import { Expense, Member, Debt } from './types';
+import { Expense, Member, Debt, Group } from './types';
 
 // Supported Currencies List
 export const CURRENCIES = [
@@ -9,6 +9,28 @@ export const CURRENCIES = [
   { code: 'TWD', symbol: 'NT$', name: '台湾ドル' },
   { code: 'THB', symbol: '฿', name: 'タイバーツ' },
   { code: 'GBP', symbol: '£', name: '英ポンド' },
+];
+
+// Payment Apps Configuration
+export const PAYMENT_APPS = [
+  { 
+    name: 'PayPay', 
+    scheme: 'paypay://', 
+    bgColor: 'bg-[#FF0033]', 
+    textColor: 'text-white' 
+  },
+  { 
+    name: 'd払い', 
+    scheme: 'dbarai://', // Generic scheme
+    bgColor: 'bg-[#CC0033]', 
+    textColor: 'text-white' 
+  },
+  { 
+    name: '楽天ペイ', 
+    scheme: 'rakutenpay://', 
+    bgColor: 'bg-[#BF0000]', 
+    textColor: 'text-white' 
+  },
 ];
 
 export const getCurrencySymbol = (code: string) => {
@@ -22,6 +44,33 @@ export const formatCurrency = (amount: number, currency: string) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
+};
+
+// URL Encoding/Decoding for Sharing (Handles Unicode/Japanese)
+export const encodeGroupData = (group: Group): string => {
+  try {
+    const json = JSON.stringify(group);
+    // Encode specifically for Unicode support in base64
+    return btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
+      function toSolidBytes(match, p1) {
+        return String.fromCharCode(parseInt(p1, 16));
+      }));
+  } catch (e) {
+    console.error("Encoding failed", e);
+    return "";
+  }
+};
+
+export const decodeGroupData = (encoded: string): Group | null => {
+  try {
+    const json = decodeURIComponent(atob(encoded).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(json);
+  } catch (e) {
+    console.error("Decoding failed", e);
+    return null;
+  }
 };
 
 export const calculateSettlements = (
